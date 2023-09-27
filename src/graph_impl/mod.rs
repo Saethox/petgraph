@@ -1019,6 +1019,15 @@ where
         }
     }
 
+    /// Create an iterator over all nodes, in indexed order.
+    ///
+    /// Iterator element type is `NodeReferences<E, Ix>`.
+    pub fn node_references(&self) -> NodeReferences<N, Ix> {
+        NodeReferences {
+            iter: self.nodes.iter().enumerate(),
+        }
+    }
+
     /// Return an iterator over the edge indices of the graph
     pub fn edge_indices(&self) -> EdgeIndices<Ix> {
         EdgeIndices {
@@ -1372,6 +1381,39 @@ where
             node: edge.node,
         }));
         g
+    }
+
+    /// Create a new `Graph` by mapping node and
+    /// edge weights to new values.
+    ///
+    /// The resulting graph has the same structure and the same
+    /// graph indices as `self`.
+    ///
+    /// If any of the mappings return an `Err`, the method will return the first `Err`.
+    pub fn try_map<F, G, N2, E2, Error>(
+        &self,
+        mut node_map: F,
+        mut edge_map: G,
+    ) -> Result<Graph<N2, E2, Ty, Ix>, Error>
+    where
+        F: FnMut(NodeIndex<Ix>, &N) -> Result<N2, Error>,
+        G: FnMut(EdgeIndex<Ix>, &E) -> Result<E2, Error>,
+    {
+        let mut g = Graph::with_capacity(self.node_count(), self.edge_count());
+        let nodes: Vec<_> = enumerate(&self.nodes).map(|(i, node)| Ok(Node {
+            weight: node_map(NodeIndex::new(i), &node.weight)?,
+            next: node.next,
+        })).collect::<Result<_, _>>()?;
+        let edges: Vec<_> = enumerate(&self.edges).map(|(i, edge)| Ok(Edge {
+            weight: edge_map(EdgeIndex::new(i), &edge.weight)?,
+            next: edge.next,
+            node: edge.node,
+        })).collect::<Result<_, _>>()?;
+
+        g.nodes.extend(nodes);
+        g.edges.extend(edges);
+
+        Ok(g)
     }
 
     /// Create a new `Graph` by mapping nodes and edges.
