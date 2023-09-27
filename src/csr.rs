@@ -130,6 +130,7 @@ where
 
 /// Csr creation error: edges were not in sorted order.
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct EdgesNotSorted {
     first_error: (usize, usize),
 }
